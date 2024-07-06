@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThaiLLM Interface</title>
+    <link rel="stylesheet" href="{% static 'chat/styles.css' %}">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.1/jquery.min.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>ThaiLLM</h1>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Messages will be dynamically added here -->
+        </div>
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Type your message here...">
+            <button id="send-button">Send</button>
+        </div>        
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+    
+        sendButton.addEventListener('click', () => {
+            const userText = userInput.value;
+            if (userText) {
+                addMessage('user', userText);
+                userInput.value = '';
+
+                // Send the user text to the Django view
+                fetch('', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken') // Add the CSRF token for security
+                    },
+                    body: new URLSearchParams({
+                        'input_mssg': userText
+                    })
+                })
+                .then(response => response.json())
+                .then(response => {
+                    try {
+                        console.log(response.generated_text); // response was correctly generated
+                        // $('#response_thing').text(response.generated_text);
+                        addMessage('bot', response.generated_text);
+                    } catch(err) {
+                        console.log(response.error); // error message received from api
+                    }
+                }).catch((error) => {
+                    console.error("Error:", error);
+                })
+            }
+        });
+    
+        function addMessage(sender, text) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender);
+            messageElement.innerText = text;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    
+        // Function to get the CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+    <!-- <footer>
+        <h1 id="response_thing"></h1>
+    </footer> -->
+</body>
+</html>
